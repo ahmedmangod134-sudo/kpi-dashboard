@@ -176,6 +176,34 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
 }
 .fpill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .fpill:hover:not(.active){border-color:var(--accent);color:var(--t1);}
+
+/* ROLE SLICER */
+.slicer-section{
+  background:var(--card);border:1px solid var(--cardb);
+  border-radius:var(--rl);padding:16px 20px;margin-bottom:14px;
+}
+.slicer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.slicer-title{font-size:12px;font-weight:600;color:var(--t1);display:flex;align-items:center;gap:7px;}
+.slicer-icon{width:18px;height:18px;border-radius:5px;background:rgba(61,127,255,.18);display:flex;align-items:center;justify-content:center;font-size:10px;}
+.slicer-info{font-size:10px;color:var(--t3);font-family:'DM Mono',monospace;}
+.slicer-pills{display:flex;flex-wrap:wrap;gap:7px;}
+.spill{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 13px;border-radius:999px;
+  border:1px solid var(--cardb);background:var(--card);
+  font-size:11px;color:var(--t2);cursor:pointer;
+  transition:all .18s ease;user-select:none;
+  font-family:'DM Sans',sans-serif;
+}
+.spill:hover{border-color:rgba(61,127,255,.5);color:var(--t1);}
+.spill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.spill.active .spill-count{background:rgba(255,255,255,.2);color:#fff;}
+.spill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.spill-count{
+  font-size:9px;font-family:'DM Mono',monospace;
+  background:var(--cardb);padding:1px 5px;border-radius:6px;
+  color:var(--t3);transition:all .18s;
+}
 </style>
 </head>
 <body>
@@ -241,6 +269,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
       <div class="topbar-right">
         <div class="last-sync"><span class="status-dot"></span>Live from Google Sheets</div>
         <div class="last-sync" id="sync-time">—</div>
+      </div>
+    </div>
+
+    <!-- ROLE SLICER -->
+    <div class="slicer-section">
+      <div class="slicer-header">
+        <div class="slicer-title">
+          <div class="slicer-icon">⊞</div>
+          Filter by Role Title
+        </div>
+        <div class="slicer-info" id="slicer-info">— KPIs selected</div>
+      </div>
+      <div class="slicer-pills" id="slicer-pills">
+        <div class="spill active" id="spill-all" onclick="slicerSelect('__all__',this)">
+          <span>All Roles</span>
+          <span class="spill-count" id="spill-count-all">—</span>
+        </div>
       </div>
     </div>
 
@@ -373,6 +418,7 @@ const SHEET_NAME = 'KPI_Data';
 let allData = [];
 let currentFilter = 'all';
 let currentRAG = null;
+let currentRole = '__all__';
 
 const DEPT_MAP = {
   'Chief Executive Officer (CEO)': 'Executive',
@@ -407,7 +453,8 @@ async function loadData() {
       cols.forEach((c,i) => { row[c] = r.c[i] ? r.c[i].v : null; });
       return row;
     });
-    render(allData);
+    buildSlicer(allData);
+    render(getFiltered());
     document.getElementById('sync-time').textContent = new Date().toLocaleTimeString('en-GB');
     document.getElementById('loading').classList.add('hidden');
   } catch(e) {
@@ -425,6 +472,7 @@ function getFiltered() {
   if (currentFilter !== 'all') d = d.filter(r => (DEPT_MAP[r.Role_Title] || '') === currentFilter);
   if (currentRAG === 'none') d = d.filter(r => !r.Score);
   else if (currentRAG) d = d.filter(r => r.RAG_Status === currentRAG);
+  if (currentRole !== '__all__') d = d.filter(r => r.Role_Title === currentRole);
   return d;
 }
 
@@ -565,21 +613,81 @@ function render(data) {
   document.getElementById('page-sub').textContent = total + ' KPIs · ' + nRoles + ' roles · ' + scored.length + ' scored';
 }
 
+function buildSlicer(data) {
+  const roles = [...new Set(data.map(r => r.Role_Title).filter(Boolean))].sort();
+  const pillsEl = document.getElementById('slicer-pills');
+
+  // keep the "All Roles" pill, remove old role pills
+  const existing = pillsEl.querySelectorAll('.spill[data-role]');
+  existing.forEach(e => e.remove());
+
+  // update "All" count
+  document.getElementById('spill-count-all').textContent = data.length;
+
+  // role color mapping — cycle through accent colors per dept
+  const ROLE_COLORS = {
+    'Executive': '#3D7FFF',
+    'Clinical':  '#00C9A7',
+    'Corporate': '#FFB020',
+  };
+
+  roles.forEach(role => {
+    const dept = DEPT_MAP[role] || '';
+    const color = ROLE_COLORS[dept] || '#8DA4C8';
+    const count = data.filter(r => r.Role_Title === role).length;
+    const p = document.createElement('div');
+    p.className = 'spill' + (currentRole === role ? ' active' : '');
+    p.dataset.role = role;
+    p.onclick = () => slicerSelect(role, p);
+    p.innerHTML = `<span class="spill-dot" style="background:${color}"></span><span>${role}</span><span class="spill-count">${count}</span>`;
+    pillsEl.appendChild(p);
+  });
+
+  updateSlicerInfo();
+}
+
+function slicerSelect(role, el) {
+  currentRole = role;
+  document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  updateSlicerInfo();
+  render(getFiltered());
+}
+
+function updateSlicerInfo() {
+  const filtered = getFiltered();
+  const roleLabel = currentRole === '__all__' ? 'All Roles' : currentRole;
+  document.getElementById('slicer-info').textContent = filtered.length + ' KPIs · ' + roleLabel;
+}
+
 function setView(filter, el) {
   currentFilter = filter;
   currentRAG = null;
+  currentRole = '__all__';
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   el.classList.add('active');
+  // reset slicer pill to "All"
+  document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
+  const allPill = document.getElementById('spill-all');
+  if (allPill) allPill.classList.add('active');
   const titles = {all:'All Roles — Overview',Corporate:'Corporate Roles',Clinical:'Clinical Roles',Executive:'Executive Roles'};
   document.getElementById('page-title').textContent = titles[filter] || filter;
-  render(getFiltered());
+  const base = getFiltered();
+  buildSlicer(base);
+  render(base);
 }
 
 function setRAG(rag, el) {
   currentRAG = rag === currentRAG ? null : rag;
+  currentRole = '__all__';
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (currentRAG) el.classList.add('active');
-  render(getFiltered());
+  document.querySelectorAll('.spill').forEach(p => p.classList.remove('active'));
+  const allPill = document.getElementById('spill-all');
+  if (allPill) allPill.classList.add('active');
+  const base = getFiltered();
+  buildSlicer(allData); // rebuild slicer with counts from full allData
+  render(base);
 }
 
 loadData();
