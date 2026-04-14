@@ -369,18 +369,37 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
       </div>
     </div>
 
-    <!-- ROLE SLICER -->
-    <div class="slicer-section">
-      <span class="slicer-label">Role</span>
-      <div class="slicer-select-wrap">
-        <select class="slicer-select" id="slicer-select" onchange="slicerSelectDropdown(this.value)">
-          <option value="__all__">All Roles</option>
-        </select>
+    <!-- MONTH + ROLE SLICER ROW -->
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+
+      <!-- MONTH SLICER -->
+      <div class="slicer-section" style="margin-bottom:0;flex:1;min-width:280px;">
+        <span class="slicer-label">Month</span>
+        <div class="slicer-select-wrap">
+          <select class="slicer-select" id="month-select" onchange="monthChanged(this.value)">
+            <option value="__latest__">Latest Month</option>
+          </select>
+        </div>
+        <div class="slicer-badge">
+          <span class="slicer-dept-tag" id="month-tag" style="background:rgba(61,127,255,.12);color:var(--accent);">—</span>
+          <span class="slicer-kpi-count" id="month-kpi-count">— KPIs</span>
+        </div>
       </div>
-      <div class="slicer-badge">
-        <span class="slicer-dept-tag" id="slicer-dept-tag">All Depts</span>
-        <span class="slicer-kpi-count" id="slicer-kpi-count">— KPIs</span>
+
+      <!-- ROLE SLICER -->
+      <div class="slicer-section" style="margin-bottom:0;flex:1;min-width:280px;">
+        <span class="slicer-label">Role</span>
+        <div class="slicer-select-wrap">
+          <select class="slicer-select" id="slicer-select" onchange="slicerSelectDropdown(this.value)">
+            <option value="__all__">All Roles</option>
+          </select>
+        </div>
+        <div class="slicer-badge">
+          <span class="slicer-dept-tag" id="slicer-dept-tag">All Depts</span>
+          <span class="slicer-kpi-count" id="slicer-kpi-count">— KPIs</span>
+        </div>
       </div>
+
     </div>
 
     <!-- TAB NAVIGATION -->
@@ -551,6 +570,7 @@ let currentFilter = 'all';
 let currentRAG = null;
 let currentRole = '__all__';
 let currentMapDept = '__all__';
+let currentMonth = '__latest__';
 
 const DEPT_MAP = {
   'Chief Executive Officer (CEO)': 'Executive',
@@ -585,7 +605,8 @@ async function loadData() {
       cols.forEach((c,i) => { row[c] = r.c[i] ? r.c[i].v : null; });
       return row;
     });
-    buildSlicer(allData);
+    buildMonthSlicer();
+    buildSlicer(getMonthData());
     render(getFiltered());
     document.getElementById('sync-time').textContent = new Date().toLocaleTimeString('en-GB');
     document.getElementById('loading').classList.add('hidden');
@@ -603,13 +624,73 @@ function getDept(r) {
   return r.Department || DEPT_MAP[r.Role_Title] || '';
 }
 
+// Month order for sorting
+const MONTH_ORDER = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function getMonthData() {
+  // Returns data for the selected month only
+  if (currentMonth === '__latest__') {
+    const months = [...new Set(allData.map(r => r.Month).filter(Boolean))];
+    months.sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+    const latest = months[months.length - 1];
+    if (latest) return allData.filter(r => r.Month === latest);
+    return allData; // fallback if no Month column
+  }
+  if (currentMonth === '__all__') return allData;
+  return allData.filter(r => r.Month === currentMonth);
+}
+
 function getFiltered() {
-  let d = allData;
+  let d = getMonthData();
   if (currentFilter !== 'all') d = d.filter(r => getDept(r) === currentFilter);
   if (currentRAG === 'none') d = d.filter(r => !r.Score);
   else if (currentRAG) d = d.filter(r => r.RAG_Status === currentRAG);
   if (currentRole !== '__all__') d = d.filter(r => r.Role_Title === currentRole);
   return d;
+}
+
+function buildMonthSlicer() {
+  const months = [...new Set(allData.map(r => r.Month).filter(Boolean))];
+  months.sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+  const sel = document.getElementById('month-select');
+  sel.innerHTML = '<option value="__latest__">Latest Month</option><option value="__all__">All Months</option>';
+  months.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m;
+    if (m === currentMonth) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (currentMonth === '__latest__') sel.value = '__latest__';
+  else if (currentMonth === '__all__') sel.value = '__all__';
+  updateMonthBadge();
+}
+
+function monthChanged(month) {
+  currentMonth = month;
+  currentRole = '__all__';
+  const roleSel = document.getElementById('slicer-select');
+  if (roleSel) roleSel.value = '__all__';
+  updateMonthBadge();
+  buildSlicer(getMonthData());
+  render(getFiltered());
+}
+
+function updateMonthBadge() {
+  const monthData = getMonthData();
+  const tag = document.getElementById('month-tag');
+  const countEl = document.getElementById('month-kpi-count');
+  // figure out which month label to show
+  let label = currentMonth;
+  if (currentMonth === '__latest__') {
+    const months = [...new Set(allData.map(r => r.Month).filter(Boolean))];
+    months.sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+    label = months[months.length - 1] || 'Latest';
+  } else if (currentMonth === '__all__') {
+    label = 'All';
+  }
+  tag.textContent = label;
+  countEl.textContent = monthData.length + ' KPIs';
 }
 
 function barColor(score) {
@@ -647,15 +728,16 @@ function render(data) {
   document.getElementById('c-risk').textContent = nRisk;
   document.getElementById('c-risk-badge').textContent = nRisk + ' KPIs need action';
 
-  document.getElementById('cnt-all').textContent = allData.length;
-  document.getElementById('cnt-corp').textContent = allData.filter(r=>getDept(r)==='Corporate').length;
-  document.getElementById('cnt-clin').textContent = allData.filter(r=>getDept(r)==='Clinical').length;
-  document.getElementById('cnt-exec').textContent = allData.filter(r=>getDept(r)==='Executive').length;
-  document.getElementById('cnt-fac').textContent = allData.filter(r=>getDept(r)==='Facilities').length;
-  document.getElementById('cnt-g').textContent = allData.filter(r=>r.RAG_Status==='Green').length;
-  document.getElementById('cnt-a').textContent = allData.filter(r=>r.RAG_Status==='Amber').length;
-  document.getElementById('cnt-r').textContent = allData.filter(r=>r.RAG_Status==='Red').length;
-  document.getElementById('cnt-ns').textContent = allData.filter(r=>!r.Score).length;
+  const monthFiltered = getMonthData();
+  document.getElementById('cnt-all').textContent = monthFiltered.length;
+  document.getElementById('cnt-corp').textContent = monthFiltered.filter(r=>getDept(r)==='Corporate').length;
+  document.getElementById('cnt-clin').textContent = monthFiltered.filter(r=>getDept(r)==='Clinical').length;
+  document.getElementById('cnt-exec').textContent = monthFiltered.filter(r=>getDept(r)==='Executive').length;
+  document.getElementById('cnt-fac').textContent = monthFiltered.filter(r=>getDept(r)==='Facilities').length;
+  document.getElementById('cnt-g').textContent = monthFiltered.filter(r=>r.RAG_Status==='Green').length;
+  document.getElementById('cnt-a').textContent = monthFiltered.filter(r=>r.RAG_Status==='Amber').length;
+  document.getElementById('cnt-r').textContent = monthFiltered.filter(r=>r.RAG_Status==='Red').length;
+  document.getElementById('cnt-ns').textContent = monthFiltered.filter(r=>!r.Score).length;
 
   const circ = 207;
   const gDash = total ? (nGreen/total*circ).toFixed(1) : 0;
@@ -780,11 +862,12 @@ function render(data) {
     </div>`;
   }).join('');
 
-  document.getElementById('page-sub').textContent = total + ' KPIs · ' + nRoles + ' roles · ' + scored.length + ' scored';
+  const activeMonth = currentMonth === '__latest__' ? (() => { const ms = [...new Set(allData.map(r=>r.Month).filter(Boolean))]; ms.sort((a,b)=>MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b)); return ms[ms.length-1]||''; })() : (currentMonth === '__all__' ? 'All Months' : currentMonth);
+  document.getElementById('page-sub').textContent = total + ' KPIs · ' + nRoles + ' roles · ' + scored.length + ' scored' + (activeMonth ? ' · ' + activeMonth : '');
 }
 
 function buildSlicer(data) {
-  const roles = [...new Set(allData.map(r => r.Role_Title).filter(Boolean))].sort();
+  const roles = [...new Set(data.map(r => r.Role_Title).filter(Boolean))].sort();
   const sel = document.getElementById('slicer-select');
   // rebuild options
   sel.innerHTML = '<option value="__all__">All Roles</option>';
@@ -808,7 +891,7 @@ function slicerSelectDropdown(role) {
 function updateSlicerBadge() {
   const filtered = getFiltered();
   const DEPT_COLORS = { Executive:'#3D7FFF', Clinical:'#00C9A7', Corporate:'#FFB020', Facilities:'#A78BFA' };
-  const dept = currentRole === '__all__' ? '' : getDept({Role_Title: currentRole, Department: (allData.find(r=>r.Role_Title===currentRole)||{}).Department});
+  const dept = currentRole === '__all__' ? '' : getDept({Role_Title: currentRole, Department: (getMonthData().find(r=>r.Role_Title===currentRole)||{}).Department});
   const deptTag = document.getElementById('slicer-dept-tag');
   const countEl = document.getElementById('slicer-kpi-count');
   deptTag.textContent = dept || 'All Depts';
@@ -827,7 +910,7 @@ function setView(filter, el) {
   if (sel) sel.value = '__all__';
   const titles = {all:'All Roles — Overview',Corporate:'Corporate Roles',Clinical:'Clinical Roles',Executive:'Executive Roles',Facilities:'Facilities Roles'};
   document.getElementById('page-title').textContent = titles[filter] || filter;
-  buildSlicer(allData);
+  buildSlicer(getMonthData());
   render(getFiltered());
 }
 
@@ -838,7 +921,7 @@ function setRAG(rag, el) {
   if (currentRAG) el.classList.add('active');
   const sel = document.getElementById('slicer-select');
   if (sel) sel.value = '__all__';
-  buildSlicer(allData);
+  buildSlicer(getMonthData());
   render(getFiltered());
 }
 
@@ -855,7 +938,7 @@ function switchTab(tab, el) {
 
 function buildMapDeptSlicer() {
   // Get departments from data: prefer 'Department' column, fallback to DEPT_MAP
-  const depts = [...new Set(allData.map(r => r.Department || DEPT_MAP[r.Role_Title] || '—').filter(Boolean))].sort();
+  const depts = [...new Set(getMonthData().map(r => r.Department || DEPT_MAP[r.Role_Title] || '—').filter(Boolean))].sort();
   const sel = document.getElementById('map-dept-select');
   sel.innerHTML = '<option value="__all__">All Departments</option>';
   depts.forEach(dept => {
@@ -885,9 +968,9 @@ function updateMapDeptBadge() {
   deptTag.style.color = col;
   deptTag.style.background = currentMapDept !== '__all__' ? (col + '18') : 'rgba(255,255,255,.06)';
   // count KPIs in selected dept
-  let filtered = allData;
+  let filtered = getMonthData();
   if (currentMapDept !== '__all__') {
-    filtered = allData.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
+    filtered = filtered.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
   }
   countEl.textContent = filtered.length + ' KPIs';
 }
@@ -896,10 +979,10 @@ function renderKPIMap(search) {
   const grid = document.getElementById('map-grid');
   const q = (search || '').toLowerCase().trim();
 
-  // Filter by selected department first
-  let sourceData = allData;
+  // Filter by month first, then by selected department
+  let sourceData = getMonthData();
   if (currentMapDept !== '__all__') {
-    sourceData = allData.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
+    sourceData = sourceData.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
   }
 
   // Group by Department
