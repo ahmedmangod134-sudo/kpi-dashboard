@@ -377,7 +377,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
         <span class="slicer-label">Month</span>
         <div class="slicer-select-wrap">
           <select class="slicer-select" id="month-select" onchange="monthChanged(this.value)">
-            <option value="__latest__">Latest Month</option>
+            <option value="__all__">All Months</option>
           </select>
         </div>
         <div class="slicer-badge">
@@ -570,7 +570,7 @@ let currentFilter = 'all';
 let currentRAG = null;
 let currentRole = '__all__';
 let currentMapDept = '__all__';
-let currentMonth = '__latest__';
+let currentMonth = '__all__';
 
 const DEPT_MAP = {
   'Chief Executive Officer (CEO)': 'Executive',
@@ -603,8 +603,13 @@ async function loadData() {
     allData = json.table.rows.map(r => {
       const row = {};
       cols.forEach((c,i) => { row[c] = r.c[i] ? r.c[i].v : null; });
+      // Normalize Month column — trim whitespace
+      if (row.Month && typeof row.Month === 'string') row.Month = row.Month.trim();
       return row;
     });
+    console.log('Total rows loaded:', allData.length);
+    console.log('Months found:', [...new Set(allData.map(r => r.Month))]);
+    console.log('Sample row:', allData[0]);
     buildMonthSlicer();
     buildSlicer(getMonthData());
     render(getFiltered());
@@ -628,14 +633,6 @@ function getDept(r) {
 const MONTH_ORDER = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function getMonthData() {
-  // Returns data for the selected month only
-  if (currentMonth === '__latest__') {
-    const months = [...new Set(allData.map(r => r.Month).filter(Boolean))];
-    months.sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
-    const latest = months[months.length - 1];
-    if (latest) return allData.filter(r => r.Month === latest);
-    return allData; // fallback if no Month column
-  }
   if (currentMonth === '__all__') return allData;
   return allData.filter(r => r.Month === currentMonth);
 }
@@ -653,7 +650,7 @@ function buildMonthSlicer() {
   const months = [...new Set(allData.map(r => r.Month).filter(Boolean))];
   months.sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
   const sel = document.getElementById('month-select');
-  sel.innerHTML = '<option value="__latest__">Latest Month</option><option value="__all__">All Months</option>';
+  sel.innerHTML = '<option value="__all__">All Months</option>';
   months.forEach(m => {
     const opt = document.createElement('option');
     opt.value = m;
@@ -661,8 +658,7 @@ function buildMonthSlicer() {
     if (m === currentMonth) opt.selected = true;
     sel.appendChild(opt);
   });
-  if (currentMonth === '__latest__') sel.value = '__latest__';
-  else if (currentMonth === '__all__') sel.value = '__all__';
+  if (currentMonth === '__all__') sel.value = '__all__';
   updateMonthBadge();
 }
 
@@ -680,15 +676,7 @@ function updateMonthBadge() {
   const monthData = getMonthData();
   const tag = document.getElementById('month-tag');
   const countEl = document.getElementById('month-kpi-count');
-  // figure out which month label to show
-  let label = currentMonth;
-  if (currentMonth === '__latest__') {
-    const months = [...new Set(allData.map(r => r.Month).filter(Boolean))];
-    months.sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
-    label = months[months.length - 1] || 'Latest';
-  } else if (currentMonth === '__all__') {
-    label = 'All';
-  }
+  const label = currentMonth === '__all__' ? 'All' : currentMonth;
   tag.textContent = label;
   countEl.textContent = monthData.length + ' KPIs';
 }
@@ -862,8 +850,8 @@ function render(data) {
     </div>`;
   }).join('');
 
-  const activeMonth = currentMonth === '__latest__' ? (() => { const ms = [...new Set(allData.map(r=>r.Month).filter(Boolean))]; ms.sort((a,b)=>MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b)); return ms[ms.length-1]||''; })() : (currentMonth === '__all__' ? 'All Months' : currentMonth);
-  document.getElementById('page-sub').textContent = total + ' KPIs · ' + nRoles + ' roles · ' + scored.length + ' scored' + (activeMonth ? ' · ' + activeMonth : '');
+  const activeMonth = currentMonth === '__all__' ? 'All Months' : currentMonth;
+  document.getElementById('page-sub').textContent = total + ' KPIs · ' + nRoles + ' roles · ' + scored.length + ' scored · ' + activeMonth;
 }
 
 function buildSlicer(data) {
