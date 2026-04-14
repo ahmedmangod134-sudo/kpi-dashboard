@@ -259,6 +259,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
 .map-dept-exec{background:rgba(61,127,255,.15);color:var(--accent);}
 .map-dept-clin{background:rgba(0,201,167,.15);color:var(--accent2);}
 .map-dept-corp{background:rgba(255,176,32,.15);color:var(--amber);}
+.map-dept-fac{background:rgba(167,139,250,.15);color:#A78BFA;}
 .map-stats{display:flex;gap:16px;margin-bottom:14px;}
 .map-stat{text-align:center;flex:1;}
 .map-stat-val{font-size:18px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;}
@@ -328,6 +329,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
     </div>
     <div class="sb-item" onclick="setView('Executive',this)">
       <div class="sb-icon">◇</div> Executive <span class="sb-count" id="cnt-exec">—</span>
+    </div>
+    <div class="sb-item" onclick="setView('Facilities',this)">
+      <div class="sb-icon">◇</div> Facilities <span class="sb-count" id="cnt-fac">—</span>
     </div>
 
     <div class="sb-divider"></div>
@@ -513,9 +517,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
 
     <!-- TAB: KPI MAP -->
     <div class="tab-content" id="tab-kpimap">
+      <!-- Department Slicer -->
+      <div class="slicer-section" style="margin-bottom:14px;">
+        <span class="slicer-label">Department</span>
+        <div class="slicer-select-wrap">
+          <select class="slicer-select" id="map-dept-select" onchange="mapDeptChanged(this.value)">
+            <option value="__all__">All Departments</option>
+          </select>
+        </div>
+        <div class="slicer-badge">
+          <span class="slicer-dept-tag" id="map-dept-tag">All Depts</span>
+          <span class="slicer-kpi-count" id="map-dept-count">— KPIs</span>
+        </div>
+      </div>
       <div class="map-search-wrap">
         <span class="map-search-icon">⌕</span>
-        <input type="text" class="map-search" id="map-search" placeholder="Search roles or KPIs..." oninput="renderKPIMap(this.value)">
+        <input type="text" class="map-search" id="map-search" placeholder="Search departments, roles or KPIs..." oninput="renderKPIMap(this.value)">
       </div>
       <div class="map-grid" id="map-grid">
         <div style="color:var(--t3);font-size:12px;">Loading KPI Map...</div>
@@ -533,6 +550,7 @@ let allData = [];
 let currentFilter = 'all';
 let currentRAG = null;
 let currentRole = '__all__';
+let currentMapDept = '__all__';
 
 const DEPT_MAP = {
   'Chief Executive Officer (CEO)': 'Executive',
@@ -581,9 +599,13 @@ async function loadData() {
   document.getElementById('spin-icon').style.display = 'none';
 }
 
+function getDept(r) {
+  return r.Department || DEPT_MAP[r.Role_Title] || '';
+}
+
 function getFiltered() {
   let d = allData;
-  if (currentFilter !== 'all') d = d.filter(r => (DEPT_MAP[r.Role_Title] || '') === currentFilter);
+  if (currentFilter !== 'all') d = d.filter(r => getDept(r) === currentFilter);
   if (currentRAG === 'none') d = d.filter(r => !r.Score);
   else if (currentRAG) d = d.filter(r => r.RAG_Status === currentRAG);
   if (currentRole !== '__all__') d = d.filter(r => r.Role_Title === currentRole);
@@ -626,9 +648,10 @@ function render(data) {
   document.getElementById('c-risk-badge').textContent = nRisk + ' KPIs need action';
 
   document.getElementById('cnt-all').textContent = allData.length;
-  document.getElementById('cnt-corp').textContent = allData.filter(r=>(DEPT_MAP[r.Role_Title]||'')==='Corporate').length;
-  document.getElementById('cnt-clin').textContent = allData.filter(r=>(DEPT_MAP[r.Role_Title]||'')==='Clinical').length;
-  document.getElementById('cnt-exec').textContent = allData.filter(r=>(DEPT_MAP[r.Role_Title]||'')==='Executive').length;
+  document.getElementById('cnt-corp').textContent = allData.filter(r=>getDept(r)==='Corporate').length;
+  document.getElementById('cnt-clin').textContent = allData.filter(r=>getDept(r)==='Clinical').length;
+  document.getElementById('cnt-exec').textContent = allData.filter(r=>getDept(r)==='Executive').length;
+  document.getElementById('cnt-fac').textContent = allData.filter(r=>getDept(r)==='Facilities').length;
   document.getElementById('cnt-g').textContent = allData.filter(r=>r.RAG_Status==='Green').length;
   document.getElementById('cnt-a').textContent = allData.filter(r=>r.RAG_Status==='Amber').length;
   document.getElementById('cnt-r').textContent = allData.filter(r=>r.RAG_Status==='Red').length;
@@ -670,13 +693,15 @@ function render(data) {
   document.getElementById('sc-tag2').textContent = scored.length + ' / ' + total + ' scored';
 
   const roleMap = {};
+  const roleDeptMap = {};
   data.forEach(r => {
     if (!roleMap[r.Role_Title]) roleMap[r.Role_Title] = [];
     roleMap[r.Role_Title].push(r.Score);
+    if (!roleDeptMap[r.Role_Title]) roleDeptMap[r.Role_Title] = r.Department || DEPT_MAP[r.Role_Title] || '';
   });
   const roleAvgs = Object.entries(roleMap).map(([role, scores]) => {
     const sc = scores.filter(Boolean);
-    return { role, avg: sc.length ? sc.reduce((a,b)=>a+b,0)/sc.length : 0, count: scores.length };
+    return { role, avg: sc.length ? sc.reduce((a,b)=>a+b,0)/sc.length : 0, count: scores.length, dept: roleDeptMap[role] };
   }).sort((a,b) => b.avg - a.avg);
 
   const barsEl = document.getElementById('bars-container');
@@ -747,7 +772,7 @@ function render(data) {
     const rag = r.avg >= 3.5 ? 'bg' : r.avg >= 2.5 ? 'ba' : r.avg ? 'br' : '';
     const ragLabel = r.avg >= 3.5 ? 'Green' : r.avg >= 2.5 ? 'Amber' : r.avg ? 'Red' : '—';
     return `<div class="role-row">
-      <div><div class="role-name">${r.role}</div><div class="role-dept">${DEPT_MAP[r.role]||'—'} · ${r.count} KPIs</div></div>
+      <div><div class="role-name">${r.role}</div><div class="role-dept">${getDept({Role_Title:r.role, Department:r.dept})||'—'} · ${r.count} KPIs</div></div>
       <div class="role-right">
         <span class="role-score" style="color:${col}">${r.avg?r.avg.toFixed(1):'—'}</span>
         ${rag ? `<span class="badge ${rag}">${ragLabel}</span>` : ''}
@@ -782,8 +807,8 @@ function slicerSelectDropdown(role) {
 
 function updateSlicerBadge() {
   const filtered = getFiltered();
-  const DEPT_COLORS = { Executive:'#3D7FFF', Clinical:'#00C9A7', Corporate:'#FFB020' };
-  const dept = currentRole === '__all__' ? '' : (DEPT_MAP[currentRole] || '');
+  const DEPT_COLORS = { Executive:'#3D7FFF', Clinical:'#00C9A7', Corporate:'#FFB020', Facilities:'#A78BFA' };
+  const dept = currentRole === '__all__' ? '' : getDept({Role_Title: currentRole, Department: (allData.find(r=>r.Role_Title===currentRole)||{}).Department});
   const deptTag = document.getElementById('slicer-dept-tag');
   const countEl = document.getElementById('slicer-kpi-count');
   deptTag.textContent = dept || 'All Depts';
@@ -800,7 +825,7 @@ function setView(filter, el) {
   el.classList.add('active');
   const sel = document.getElementById('slicer-select');
   if (sel) sel.value = '__all__';
-  const titles = {all:'All Roles — Overview',Corporate:'Corporate Roles',Clinical:'Clinical Roles',Executive:'Executive Roles'};
+  const titles = {all:'All Roles — Overview',Corporate:'Corporate Roles',Clinical:'Clinical Roles',Executive:'Executive Roles',Facilities:'Facilities Roles'};
   document.getElementById('page-title').textContent = titles[filter] || filter;
   buildSlicer(allData);
   render(getFiltered());
@@ -822,58 +847,117 @@ function switchTab(tab, el) {
   el.classList.add('active');
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'kpimap') renderKPIMap('');
+  if (tab === 'kpimap') {
+    buildMapDeptSlicer();
+    renderKPIMap('');
+  }
+}
+
+function buildMapDeptSlicer() {
+  // Get departments from data: prefer 'Department' column, fallback to DEPT_MAP
+  const depts = [...new Set(allData.map(r => r.Department || DEPT_MAP[r.Role_Title] || '—').filter(Boolean))].sort();
+  const sel = document.getElementById('map-dept-select');
+  sel.innerHTML = '<option value="__all__">All Departments</option>';
+  depts.forEach(dept => {
+    const opt = document.createElement('option');
+    opt.value = dept;
+    opt.textContent = dept;
+    if (dept === currentMapDept) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (currentMapDept === '__all__') sel.value = '__all__';
+  updateMapDeptBadge();
+}
+
+function mapDeptChanged(dept) {
+  currentMapDept = dept;
+  updateMapDeptBadge();
+  const searchVal = document.getElementById('map-search') ? document.getElementById('map-search').value : '';
+  renderKPIMap(searchVal);
+}
+
+function updateMapDeptBadge() {
+  const DEPT_COLORS = { Executive:'#3D7FFF', Clinical:'#00C9A7', Corporate:'#FFB020', Facilities:'#A78BFA' };
+  const deptTag = document.getElementById('map-dept-tag');
+  const countEl = document.getElementById('map-dept-count');
+  deptTag.textContent = currentMapDept === '__all__' ? 'All Depts' : currentMapDept;
+  const col = DEPT_COLORS[currentMapDept] || 'var(--t2)';
+  deptTag.style.color = col;
+  deptTag.style.background = currentMapDept !== '__all__' ? (col + '18') : 'rgba(255,255,255,.06)';
+  // count KPIs in selected dept
+  let filtered = allData;
+  if (currentMapDept !== '__all__') {
+    filtered = allData.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
+  }
+  countEl.textContent = filtered.length + ' KPIs';
 }
 
 function renderKPIMap(search) {
   const grid = document.getElementById('map-grid');
   const q = (search || '').toLowerCase().trim();
 
-  // Group by role
-  const roleGroups = {};
-  allData.forEach(r => {
-    const role = r.Role_Title || 'Unknown';
-    if (!roleGroups[role]) roleGroups[role] = [];
-    roleGroups[role].push(r);
+  // Filter by selected department first
+  let sourceData = allData;
+  if (currentMapDept !== '__all__') {
+    sourceData = allData.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
+  }
+
+  // Group by Department
+  const deptGroups = {};
+  sourceData.forEach(r => {
+    const dept = r.Department || DEPT_MAP[r.Role_Title] || '—';
+    if (!deptGroups[dept]) deptGroups[dept] = [];
+    deptGroups[dept].push(r);
   });
 
   const DEPT_COLORS = {
     Executive: { bg: 'map-dept-exec', color: '#3D7FFF' },
     Clinical:  { bg: 'map-dept-clin', color: '#00C9A7' },
-    Corporate: { bg: 'map-dept-corp', color: '#FFB020' }
+    Corporate: { bg: 'map-dept-corp', color: '#FFB020' },
+    Facilities:{ bg: 'map-dept-fac',  color: '#A78BFA' }
   };
 
   let html = '';
-  const sortedRoles = Object.keys(roleGroups).sort();
+  const sortedDepts = Object.keys(deptGroups).sort();
 
-  sortedRoles.forEach(role => {
-    const kpis = roleGroups[role];
-    const dept = DEPT_MAP[role] || '—';
+  sortedDepts.forEach(dept => {
+    const kpis = deptGroups[dept];
     const deptStyle = DEPT_COLORS[dept] || { bg: '', color: 'var(--t3)' };
+
+    // Group KPIs by role within department
+    const roleGroups = {};
+    kpis.forEach(k => {
+      const role = k.Role_Title || 'Unknown';
+      if (!roleGroups[role]) roleGroups[role] = [];
+      roleGroups[role].push(k);
+    });
+
     const scored = kpis.filter(k => k.Score);
     const avg = scored.length ? (scored.reduce((s, k) => s + k.Score, 0) / scored.length) : 0;
     const greens = kpis.filter(k => k.RAG_Status === 'Green').length;
     const ambers = kpis.filter(k => k.RAG_Status === 'Amber').length;
     const reds = kpis.filter(k => k.RAG_Status === 'Red').length;
+    const roles = Object.keys(roleGroups);
 
     // Search filter
-    const roleMatch = role.toLowerCase().includes(q);
+    const deptMatch = dept.toLowerCase().includes(q);
+    const roleMatch = roles.some(r => r.toLowerCase().includes(q));
     const kpiMatch = kpis.some(k => (k.KPI_Name || '').toLowerCase().includes(q));
-    if (q && !roleMatch && !kpiMatch) return;
+    if (q && !deptMatch && !roleMatch && !kpiMatch) return;
 
-    const filteredKPIs = q && !roleMatch
-      ? kpis.filter(k => (k.KPI_Name || '').toLowerCase().includes(q))
-      : kpis;
-
-    html += `<div class="map-card">
+    html += `<div class="map-card" style="grid-column: 1 / -1;">
       <div class="map-card-header">
-        <div class="map-role-name">${role}</div>
-        <span class="map-dept-badge ${deptStyle.bg}">${dept}</span>
+        <div class="map-role-name" style="font-size:15px;">${dept}</div>
+        <span class="map-dept-badge" style="background:${deptStyle.color}22;color:${deptStyle.color};">${roles.length} roles · ${kpis.length} KPIs</span>
       </div>
       <div class="map-stats">
         <div class="map-stat">
           <div class="map-stat-val">${kpis.length}</div>
-          <div class="map-stat-label">KPIs</div>
+          <div class="map-stat-label">Total KPIs</div>
+        </div>
+        <div class="map-stat">
+          <div class="map-stat-val">${roles.length}</div>
+          <div class="map-stat-label">Roles</div>
         </div>
         <div class="map-stat">
           <div class="map-stat-val" style="color:${barColor(avg)}">${avg ? avg.toFixed(1) : '—'}</div>
@@ -891,20 +975,46 @@ function renderKPIMap(search) {
           <div class="map-stat-val" style="color:var(--red)">${reds}</div>
           <div class="map-stat-label">Red</div>
         </div>
-      </div>
-      <div class="map-kpi-list">`;
-
-    filteredKPIs.forEach((k, i) => {
-      const kpiNum = 'KPI-' + String(i + 1).padStart(3, '0');
-      const sc = k.Score;
-      const scCol = sc >= 4.5 ? 'var(--green)' : sc >= 3.5 ? 'var(--accent2)' : sc >= 2.5 ? 'var(--amber)' : sc ? 'var(--red)' : 'var(--t3)';
-      const ragClass = k.RAG_Status === 'Green' ? 'bg' : k.RAG_Status === 'Amber' ? 'ba' : k.RAG_Status === 'Red' ? 'br' : '';
-      html += `<div class="map-kpi-row">
-        <span class="map-kpi-num">${kpiNum}</span>
-        <span class="map-kpi-name" title="${k.KPI_Name || ''}">${k.KPI_Name || '—'}</span>
-        <span class="map-kpi-score" style="color:${scCol}">${sc || '—'}</span>
-        <span class="map-kpi-rag badge ${ragClass}">${k.RAG_Status || '—'}</span>
       </div>`;
+
+    // Sub-cards per role within this department
+    html += `<div class="map-grid" style="margin-top:10px;">`;
+
+    const sortedRoles = Object.keys(roleGroups).sort();
+    sortedRoles.forEach(role => {
+      const roleKPIs = roleGroups[role];
+      const roleMatch2 = role.toLowerCase().includes(q);
+      const roleKpiMatch = roleKPIs.some(k => (k.KPI_Name || '').toLowerCase().includes(q));
+      if (q && !deptMatch && !roleMatch2 && !roleKpiMatch) return;
+
+      const filteredKPIs = q && !deptMatch && !roleMatch2
+        ? roleKPIs.filter(k => (k.KPI_Name || '').toLowerCase().includes(q))
+        : roleKPIs;
+
+      const rScored = roleKPIs.filter(k => k.Score);
+      const rAvg = rScored.length ? (rScored.reduce((s, k) => s + k.Score, 0) / rScored.length) : 0;
+
+      html += `<div class="map-card">
+        <div class="map-card-header">
+          <div class="map-role-name">${role}</div>
+          <span class="map-dept-badge" style="background:${deptStyle.color}22;color:${deptStyle.color};font-size:8px;">${rAvg ? rAvg.toFixed(1) + ' avg' : '—'}</span>
+        </div>
+        <div class="map-kpi-list">`;
+
+      filteredKPIs.forEach((k, i) => {
+        const kpiId = k.KPI_ID || ('KPI-' + String(i + 1).padStart(3, '0'));
+        const sc = k.Score;
+        const scCol = sc >= 4.5 ? 'var(--green)' : sc >= 3.5 ? 'var(--accent2)' : sc >= 2.5 ? 'var(--amber)' : sc ? 'var(--red)' : 'var(--t3)';
+        const ragClass = k.RAG_Status === 'Green' ? 'bg' : k.RAG_Status === 'Amber' ? 'ba' : k.RAG_Status === 'Red' ? 'br' : '';
+        html += `<div class="map-kpi-row">
+          <span class="map-kpi-num">${kpiId}</span>
+          <span class="map-kpi-name" title="${k.KPI_Name || ''}">${k.KPI_Name || '—'}</span>
+          <span class="map-kpi-score" style="color:${scCol}">${sc || '—'}</span>
+          <span class="map-kpi-rag badge ${ragClass}">${k.RAG_Status || '—'}</span>
+        </div>`;
+      });
+
+      html += `</div></div>`;
     });
 
     html += `</div></div>`;
