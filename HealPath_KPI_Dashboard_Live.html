@@ -180,29 +180,122 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
 /* ROLE SLICER */
 .slicer-section{
   background:var(--card);border:1px solid var(--cardb);
-  border-radius:var(--rl);padding:16px 20px;margin-bottom:14px;
+  border-radius:var(--rl);padding:18px 22px;margin-bottom:14px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
 }
-.slicer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.slicer-title{font-size:12px;font-weight:600;color:var(--t1);display:flex;align-items:center;gap:7px;}
-.slicer-icon{width:18px;height:18px;border-radius:5px;background:rgba(61,127,255,.18);display:flex;align-items:center;justify-content:center;font-size:10px;}
-.slicer-info{font-size:10px;color:var(--t3);font-family:'DM Mono',monospace;}
-.slicer-pills{display:flex;flex-wrap:wrap;gap:7px;}
-.spill{
-  display:flex;align-items:center;gap:6px;
-  padding:5px 13px;border-radius:999px;
-  border:1px solid var(--cardb);background:var(--card);
-  font-size:11px;color:var(--t2);cursor:pointer;
-  transition:all .18s ease;user-select:none;
-  font-family:'DM Sans',sans-serif;
+.slicer-label{
+  font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:500;
+  flex-shrink:0;
 }
-.spill:hover{border-color:rgba(61,127,255,.5);color:var(--t1);}
-.spill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-.spill.active .spill-count{background:rgba(255,255,255,.2);color:#fff;}
-.spill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.spill-count{
+.slicer-select-wrap{position:relative;flex:1;max-width:340px;min-width:200px;}
+.slicer-select{
+  width:100%;appearance:none;-webkit-appearance:none;
+  background:var(--navy2);
+  border:1px solid rgba(61,127,255,.2);
+  border-radius:10px;
+  padding:10px 40px 10px 14px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  color:var(--t1);cursor:pointer;
+  transition:all .2s ease;
+  outline:none;
+}
+.slicer-select:hover{border-color:rgba(61,127,255,.5);background:rgba(61,127,255,.06);}
+.slicer-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(61,127,255,.12);}
+.slicer-select option{
+  background:var(--navy2);color:var(--t1);padding:8px;
+}
+.slicer-select-wrap::after{
+  content:'';position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  width:0;height:0;
+  border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--accent);
+  pointer-events:none;
+}
+.slicer-badge{
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.slicer-dept-tag{
+  font-size:10px;font-weight:600;padding:4px 12px;border-radius:999px;
+  background:rgba(255,255,255,.06);color:var(--t2);
+  letter-spacing:.3px;transition:all .2s;
+}
+.slicer-kpi-count{
+  font-size:11px;color:var(--t3);font-family:'DM Mono',monospace;
+}
+
+/* TAB NAV */
+.tab-nav{
+  display:flex;gap:0;margin-bottom:18px;
+  border-bottom:1px solid var(--cardb);
+}
+.tab-btn{
+  padding:10px 20px;font-size:13px;font-weight:500;
+  color:var(--t3);cursor:pointer;border:none;background:none;
+  font-family:'DM Sans',sans-serif;position:relative;
+  transition:color .2s;
+}
+.tab-btn:hover{color:var(--t1);}
+.tab-btn.active{color:var(--accent);}
+.tab-btn.active::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;
+  height:2px;background:var(--accent);border-radius:2px 2px 0 0;
+}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* KPI MAP */
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.map-card{
+  background:var(--card);border:1px solid var(--cardb);
+  border-radius:var(--rl);padding:20px;
+  transition:border-color .2s,transform .2s;
+}
+.map-card:hover{border-color:rgba(61,127,255,.3);transform:translateY(-2px);}
+.map-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.map-role-name{font-size:13px;font-weight:600;color:var(--t1);}
+.map-dept-badge{
+  font-size:9px;font-weight:600;padding:3px 10px;border-radius:999px;
+  letter-spacing:.3px;
+}
+.map-dept-exec{background:rgba(61,127,255,.15);color:var(--accent);}
+.map-dept-clin{background:rgba(0,201,167,.15);color:var(--accent2);}
+.map-dept-corp{background:rgba(255,176,32,.15);color:var(--amber);}
+.map-stats{display:flex;gap:16px;margin-bottom:14px;}
+.map-stat{text-align:center;flex:1;}
+.map-stat-val{font-size:18px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;}
+.map-stat-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+.map-kpi-list{display:flex;flex-direction:column;gap:6px;}
+.map-kpi-row{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:8px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.04);
+  transition:background .15s;
+}
+.map-kpi-row:hover{background:rgba(255,255,255,.05);}
+.map-kpi-num{
   font-size:9px;font-family:'DM Mono',monospace;
-  background:var(--cardb);padding:1px 5px;border-radius:6px;
-  color:var(--t3);transition:all .18s;
+  color:var(--t3);width:52px;flex-shrink:0;
+}
+.map-kpi-name{font-size:11px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.map-kpi-score{
+  font-size:12px;font-family:'DM Mono',monospace;font-weight:600;
+  width:24px;text-align:center;flex-shrink:0;
+}
+.map-kpi-rag{
+  font-size:8px;font-weight:600;padding:2px 7px;border-radius:6px;flex-shrink:0;
+}
+.map-search-wrap{margin-bottom:16px;position:relative;}
+.map-search{
+  width:100%;background:var(--navy2);border:1px solid var(--cardb);
+  border-radius:10px;padding:10px 14px 10px 36px;
+  font-family:'DM Sans',sans-serif;font-size:13px;
+  color:var(--t1);outline:none;transition:border-color .2s;
+}
+.map-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(61,127,255,.12);}
+.map-search::placeholder{color:var(--t3);}
+.map-search-icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--t3);font-size:14px;pointer-events:none;
 }
 </style>
 </head>
@@ -281,10 +374,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
         </select>
       </div>
       <div class="slicer-badge">
-        <span class="slicer-dept-tag" id="slicer-dept-tag">—</span>
+        <span class="slicer-dept-tag" id="slicer-dept-tag">All Depts</span>
         <span class="slicer-kpi-count" id="slicer-kpi-count">— KPIs</span>
       </div>
     </div>
+
+    <!-- TAB NAVIGATION -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('overview',this)">◈ Overview</button>
+      <button class="tab-btn" onclick="switchTab('kpimap',this)">◫ KPI Map</button>
+    </div>
+
+    <!-- TAB: OVERVIEW -->
+    <div class="tab-content active" id="tab-overview">
 
     <!-- KPI CARDS -->
     <div class="kpi-row">
@@ -405,6 +507,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
         </div>
       </div>
     </div>
+
+    </div>
+    <!-- END TAB: OVERVIEW -->
+
+    <!-- TAB: KPI MAP -->
+    <div class="tab-content" id="tab-kpimap">
+      <div class="map-search-wrap">
+        <span class="map-search-icon">⌕</span>
+        <input type="text" class="map-search" id="map-search" placeholder="Search roles or KPIs..." oninput="renderKPIMap(this.value)">
+      </div>
+      <div class="map-grid" id="map-grid">
+        <div style="color:var(--t3);font-size:12px;">Loading KPI Map...</div>
+      </div>
+    </div>
+    <!-- END TAB: KPI MAP -->
 
   </div>
 </div>
@@ -698,6 +815,103 @@ function setRAG(rag, el) {
   if (sel) sel.value = '__all__';
   buildSlicer(allData);
   render(getFiltered());
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'kpimap') renderKPIMap('');
+}
+
+function renderKPIMap(search) {
+  const grid = document.getElementById('map-grid');
+  const q = (search || '').toLowerCase().trim();
+
+  // Group by role
+  const roleGroups = {};
+  allData.forEach(r => {
+    const role = r.Role_Title || 'Unknown';
+    if (!roleGroups[role]) roleGroups[role] = [];
+    roleGroups[role].push(r);
+  });
+
+  const DEPT_COLORS = {
+    Executive: { bg: 'map-dept-exec', color: '#3D7FFF' },
+    Clinical:  { bg: 'map-dept-clin', color: '#00C9A7' },
+    Corporate: { bg: 'map-dept-corp', color: '#FFB020' }
+  };
+
+  let html = '';
+  const sortedRoles = Object.keys(roleGroups).sort();
+
+  sortedRoles.forEach(role => {
+    const kpis = roleGroups[role];
+    const dept = DEPT_MAP[role] || '—';
+    const deptStyle = DEPT_COLORS[dept] || { bg: '', color: 'var(--t3)' };
+    const scored = kpis.filter(k => k.Score);
+    const avg = scored.length ? (scored.reduce((s, k) => s + k.Score, 0) / scored.length) : 0;
+    const greens = kpis.filter(k => k.RAG_Status === 'Green').length;
+    const ambers = kpis.filter(k => k.RAG_Status === 'Amber').length;
+    const reds = kpis.filter(k => k.RAG_Status === 'Red').length;
+
+    // Search filter
+    const roleMatch = role.toLowerCase().includes(q);
+    const kpiMatch = kpis.some(k => (k.KPI_Name || '').toLowerCase().includes(q));
+    if (q && !roleMatch && !kpiMatch) return;
+
+    const filteredKPIs = q && !roleMatch
+      ? kpis.filter(k => (k.KPI_Name || '').toLowerCase().includes(q))
+      : kpis;
+
+    html += `<div class="map-card">
+      <div class="map-card-header">
+        <div class="map-role-name">${role}</div>
+        <span class="map-dept-badge ${deptStyle.bg}">${dept}</span>
+      </div>
+      <div class="map-stats">
+        <div class="map-stat">
+          <div class="map-stat-val">${kpis.length}</div>
+          <div class="map-stat-label">KPIs</div>
+        </div>
+        <div class="map-stat">
+          <div class="map-stat-val" style="color:${barColor(avg)}">${avg ? avg.toFixed(1) : '—'}</div>
+          <div class="map-stat-label">Avg Score</div>
+        </div>
+        <div class="map-stat">
+          <div class="map-stat-val" style="color:var(--green)">${greens}</div>
+          <div class="map-stat-label">Green</div>
+        </div>
+        <div class="map-stat">
+          <div class="map-stat-val" style="color:var(--amber)">${ambers}</div>
+          <div class="map-stat-label">Amber</div>
+        </div>
+        <div class="map-stat">
+          <div class="map-stat-val" style="color:var(--red)">${reds}</div>
+          <div class="map-stat-label">Red</div>
+        </div>
+      </div>
+      <div class="map-kpi-list">`;
+
+    filteredKPIs.forEach((k, i) => {
+      const kpiNum = 'KPI-' + String(i + 1).padStart(3, '0');
+      const sc = k.Score;
+      const scCol = sc >= 4.5 ? 'var(--green)' : sc >= 3.5 ? 'var(--accent2)' : sc >= 2.5 ? 'var(--amber)' : sc ? 'var(--red)' : 'var(--t3)';
+      const ragClass = k.RAG_Status === 'Green' ? 'bg' : k.RAG_Status === 'Amber' ? 'ba' : k.RAG_Status === 'Red' ? 'br' : '';
+      html += `<div class="map-kpi-row">
+        <span class="map-kpi-num">${kpiNum}</span>
+        <span class="map-kpi-name" title="${k.KPI_Name || ''}">${k.KPI_Name || '—'}</span>
+        <span class="map-kpi-score" style="color:${scCol}">${sc || '—'}</span>
+        <span class="map-kpi-rag badge ${ragClass}">${k.RAG_Status || '—'}</span>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  if (!html) html = '<div style="color:var(--t3);font-size:12px;grid-column:1/-1;text-align:center;padding:40px 0;">No results found</div>';
+  grid.innerHTML = html;
 }
 
 loadData();
