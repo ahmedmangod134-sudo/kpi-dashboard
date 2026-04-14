@@ -671,6 +671,7 @@ function monthChanged(month) {
   updateMonthBadge();
   buildSlicer(getMonthData());
   render(getFiltered());
+  refreshMapIfActive();
 }
 
 function updateMonthBadge() {
@@ -871,10 +872,20 @@ function buildSlicer(data) {
   updateSlicerBadge();
 }
 
+function refreshMapIfActive() {
+  const mapTab = document.getElementById('tab-kpimap');
+  if (mapTab && mapTab.classList.contains('active')) {
+    buildMapDeptSlicer();
+    const searchVal = document.getElementById('map-search') ? document.getElementById('map-search').value : '';
+    renderKPIMap(searchVal);
+  }
+}
+
 function slicerSelectDropdown(role) {
   currentRole = role;
   updateSlicerBadge();
   render(getFiltered());
+  refreshMapIfActive();
 }
 
 function updateSlicerBadge() {
@@ -901,6 +912,7 @@ function setView(filter, el) {
   document.getElementById('page-title').textContent = titles[filter] || filter;
   buildSlicer(getMonthData());
   render(getFiltered());
+  refreshMapIfActive();
 }
 
 function setRAG(rag, el) {
@@ -912,6 +924,7 @@ function setRAG(rag, el) {
   if (sel) sel.value = '__all__';
   buildSlicer(getMonthData());
   render(getFiltered());
+  refreshMapIfActive();
 }
 
 function switchTab(tab, el) {
@@ -927,7 +940,10 @@ function switchTab(tab, el) {
 
 function buildMapDeptSlicer() {
   // Get departments from data: prefer 'Department' column, fallback to DEPT_MAP
-  const depts = [...new Set(getMonthData().map(r => r.Department || DEPT_MAP[r.Role_Title] || '—').filter(Boolean))].sort();
+  const depts = [...new Set(getMonthData().map(r => {
+    const d = r.Department || DEPT_MAP[r.Role_Title] || '—';
+    return d;
+  }).filter(Boolean))].sort();
   const sel = document.getElementById('map-dept-select');
   sel.innerHTML = '<option value="__all__">All Departments</option>';
   depts.forEach(dept => {
@@ -957,7 +973,7 @@ function updateMapDeptBadge() {
   deptTag.style.color = col;
   deptTag.style.background = currentMapDept !== '__all__' ? (col + '18') : 'rgba(255,255,255,.06)';
   // count KPIs in selected dept
-  let filtered = getMonthData();
+  let filtered = getFiltered();
   if (currentMapDept !== '__all__') {
     filtered = filtered.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
   }
@@ -968,8 +984,9 @@ function renderKPIMap(search) {
   const grid = document.getElementById('map-grid');
   const q = (search || '').toLowerCase().trim();
 
-  // Filter by month first, then by selected department
-  let sourceData = getMonthData();
+  // Use the same filtered data as overview (month + sidebar filters)
+  let sourceData = getFiltered();
+  // Then apply the KPI Map's own department slicer on top
   if (currentMapDept !== '__all__') {
     sourceData = sourceData.filter(r => (r.Department || DEPT_MAP[r.Role_Title] || '—') === currentMapDept);
   }
