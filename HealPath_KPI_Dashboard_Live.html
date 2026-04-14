@@ -603,7 +603,8 @@ async function loadData() {
     allData = json.table.rows.map(r => {
       const row = {};
       cols.forEach((c,i) => { row[c] = r.c[i] ? r.c[i].v : null; });
-      // Normalize Month column — trim whitespace
+      // Normalize Month column — handle different cases
+      if (row.month !== undefined && row.Month === undefined) row.Month = row.month;
       if (row.Month && typeof row.Month === 'string') row.Month = row.Month.trim();
       return row;
     });
