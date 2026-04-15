@@ -573,23 +573,39 @@ let currentMapDept = '__all__';
 let currentMonth = '__all__';
 
 const DEPT_MAP = {
+  // Facilities
+  'Facilities Security Officer': 'Facilities',
+  'Facilities Attendant': 'Facilities',
+  'Facilities & Site Coordinator': 'Facilities',
+  // Executive
   'Chief Executive Officer (CEO)': 'Executive',
-  'Director of Clinical Governance & Patient Safety': 'Executive',
-  'Director of Clinical Services': 'Clinical',
-  'Family Medicine Physician (Telehealth)': 'Clinical',
-  'Family Medicine Coordinator (Telehealth)': 'Clinical',
-  'Doctor On Site (DOS) Physician': 'Clinical',
+  // Clinical
   'Onsite Care Coordinator': 'Clinical',
-  'Specialty Physician (Telehealth)': 'Clinical',
   'Nurse Care Manager': 'Clinical',
+  'Doctor On Site (DOS) Physician': 'Clinical',
+  'Family Medicine Coordinator (Telehealth)': 'Clinical',
+  'Family Medicine Physician (Telehealth)': 'Clinical',
+  'Specialty Physician (Telehealth)': 'Clinical',
+  'Director of Clinical Services': 'Clinical',
+  'Director of Clinical Governance & Patient Safety': 'Clinical',
   'Health & Wellness Coach': 'Clinical',
+  'Clinical Pharmacist (Case Management)': 'Clinical',
+  'Lead Clinical Pharmacist': 'Clinical',
+  'Quality & Process Excellence Officer (Clinical)': 'Clinical',
+  'Digital Health Operations Manager': 'Clinical',
+  // Corporate
   'Finance & Administration Manager': 'Corporate',
+  'Administrative Coordinator': 'Corporate',
   'Lead Accountant': 'Corporate',
   'Senior People & Culture Officer': 'Corporate',
-  'Administrative Coordinator': 'Corporate',
-  'Facilities & Site Coordinator': 'Corporate',
-  'Facilities Security Officer': 'Corporate',
-  'Facilities Attendant': 'Corporate',
+  'Customer Experience Supervisor': 'Corporate',
+  'Customer Experience Associate (Telehealth & Chronic Programs)': 'Corporate',
+  'Partnerships & Growth Manager': 'Corporate',
+  'Senior Sales & Partnerships Executive': 'Corporate',
+  'IT Support Specialist': 'Corporate',
+  'Senior Business Analyst': 'Corporate',
+  'Quality & Process Excellence Officer (Non-Clinical)': 'Corporate',
+  'Quality & Process Excellence Team Leader (Non-Clinical)': 'Corporate',
 };
 
 async function loadData() {
@@ -606,10 +622,14 @@ async function loadData() {
       // Normalize Month column — handle different cases
       if (row.month !== undefined && row.Month === undefined) row.Month = row.month;
       if (row.Month && typeof row.Month === 'string') row.Month = row.Month.trim();
+      // Normalize Department column — handle different cases
+      if (row.department !== undefined && row.Department === undefined) row.Department = row.department;
+      if (row.Department && typeof row.Department === 'string') row.Department = row.Department.trim();
       return row;
     });
     console.log('Total rows loaded:', allData.length);
     console.log('Months found:', [...new Set(allData.map(r => r.Month))]);
+    console.log('Departments found:', [...new Set(allData.map(r => r.Department))]);
     console.log('Sample row:', allData[0]);
     buildMonthSlicer();
     buildSlicer(getMonthData());
