@@ -647,7 +647,9 @@ async function loadData() {
 }
 
 function getDept(r) {
-  return r.Department || DEPT_MAP[r.Role_Title] || '';
+  const dept = r.Department;
+  if (dept && typeof dept === 'string' && dept.trim() !== '') return dept.trim();
+  return DEPT_MAP[r.Role_Title] || '';
 }
 
 // Month order for sorting
