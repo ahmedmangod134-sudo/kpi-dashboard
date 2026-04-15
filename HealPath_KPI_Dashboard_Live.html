@@ -625,11 +625,14 @@ async function loadData() {
       // Normalize Department column — handle different cases
       if (row.department !== undefined && row.Department === undefined) row.Department = row.department;
       if (row.Department && typeof row.Department === 'string') row.Department = row.Department.trim();
+      // Normalize side_bar column
+      if (row.side_bar && typeof row.side_bar === 'string') row.side_bar = row.side_bar.trim();
       return row;
     });
     console.log('Total rows loaded:', allData.length);
     console.log('Months found:', [...new Set(allData.map(r => r.Month))]);
     console.log('Departments found:', [...new Set(allData.map(r => r.Department))]);
+    console.log('Sidebar values found:', [...new Set(allData.map(r => r.side_bar))]);
     console.log('Sample row:', allData[0]);
     buildMonthSlicer();
     buildSlicer(getMonthData());
@@ -647,6 +650,9 @@ async function loadData() {
 }
 
 function getDept(r) {
+  // Priority: side_bar column > Department column > DEPT_MAP fallback
+  const sb = r.side_bar || r.Side_bar || r.Side_Bar || r.sidebar || r.Sidebar;
+  if (sb && typeof sb === 'string' && sb.trim() !== '') return sb.trim();
   const dept = r.Department;
   if (dept && typeof dept === 'string' && dept.trim() !== '') return dept.trim();
   return DEPT_MAP[r.Role_Title] || '';
