@@ -298,6 +298,79 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
   position:absolute;left:12px;top:50%;transform:translateY(-50%);
   color:var(--t3);font-size:14px;pointer-events:none;
 }
+
+/* EMPLOYEE POPUP OVERLAY */
+.emp-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+  z-index:1000;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.emp-overlay.show{opacity:1;pointer-events:all;}
+.emp-popup{
+  background:var(--navy2);border:1px solid var(--cardb);
+  border-radius:var(--rl);padding:0;width:560px;max-width:92vw;max-height:80vh;
+  display:flex;flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);
+  transform:translateY(20px) scale(.97);transition:transform .25s ease;
+}
+.emp-overlay.show .emp-popup{transform:translateY(0) scale(1);}
+.emp-popup-header{
+  padding:20px 24px 16px;border-bottom:1px solid var(--cardb);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  flex-shrink:0;
+}
+.emp-popup-title{font-size:15px;font-weight:600;color:var(--t1);line-height:1.3;}
+.emp-popup-sub{font-size:11px;color:var(--t3);margin-top:3px;}
+.emp-popup-close{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--cardb);
+  background:var(--card);color:var(--t2);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all .15s;
+}
+.emp-popup-close:hover{background:rgba(255,90,90,.15);color:var(--red);border-color:rgba(255,90,90,.3);}
+.emp-popup-body{padding:16px 24px 20px;overflow-y:auto;flex:1;}
+.emp-popup-stats{display:flex;gap:12px;margin-bottom:16px;}
+.emp-popup-stat{
+  flex:1;text-align:center;padding:10px 8px;
+  background:var(--card);border:1px solid var(--cardb);border-radius:10px;
+}
+.emp-popup-stat-val{font-size:20px;font-weight:600;font-family:'DM Mono',monospace;line-height:1;}
+.emp-popup-stat-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+.emp-list{display:flex;flex-direction:column;gap:6px;}
+.emp-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:10px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);
+  transition:all .15s;
+}
+.emp-row:hover{background:rgba(255,255,255,.05);border-color:rgba(61,127,255,.2);}
+.emp-rank{
+  font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);
+  width:22px;text-align:center;flex-shrink:0;
+}
+.emp-avatar{
+  width:30px;height:30px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;color:#fff;flex-shrink:0;
+}
+.emp-info{flex:1;min-width:0;}
+.emp-name{font-size:12px;font-weight:500;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.emp-role-tag{font-size:9px;color:var(--t3);margin-top:1px;}
+.emp-score-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.emp-score{
+  font-size:16px;font-weight:600;font-family:'DM Mono',monospace;
+}
+.emp-score-bar{width:50px;height:5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;}
+.emp-score-bar-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.emp-no-data{color:var(--t3);font-size:12px;text-align:center;padding:30px 0;font-style:italic;}
+
+/* clickable KPI rows */
+.map-kpi-row.clickable{cursor:pointer;}
+.map-kpi-row.clickable:hover{background:rgba(61,127,255,.08);border-color:rgba(61,127,255,.2);}
+.ktable tr.clickable{cursor:pointer;}
+.ktable tr.clickable:hover td{background:rgba(61,127,255,.06);}
+.bar-row.clickable{cursor:pointer;border-radius:6px;padding:3px 6px;margin:-3px -6px;}
+.bar-row.clickable:hover{background:rgba(61,127,255,.06);}
 </style>
 </head>
 <body>
@@ -400,6 +473,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
         </div>
       </div>
 
+    </div>
+
+    <!-- EMPLOYEE SLICER ROW -->
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+      <div class="slicer-section" style="margin-bottom:0;flex:1;min-width:280px;">
+        <span class="slicer-label">Employee</span>
+        <div class="slicer-select-wrap" style="max-width:400px;">
+          <select class="slicer-select" id="emp-select" onchange="empChanged(this.value)">
+            <option value="__all__">All Employees</option>
+          </select>
+        </div>
+        <div class="slicer-badge">
+          <span class="slicer-dept-tag" id="emp-tag" style="background:rgba(0,201,167,.12);color:var(--accent2);">All</span>
+          <span class="slicer-kpi-count" id="emp-count">— employees</span>
+        </div>
+      </div>
     </div>
 
     <!-- TAB NAVIGATION -->
@@ -562,15 +651,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--t1);min
   </div>
 </div>
 
+<!-- EMPLOYEE POPUP OVERLAY -->
+<div class="emp-overlay" id="emp-overlay" onclick="if(event.target===this)closeEmpPopup()">
+  <div class="emp-popup">
+    <div class="emp-popup-header">
+      <div>
+        <div class="emp-popup-title" id="emp-popup-title">—</div>
+        <div class="emp-popup-sub" id="emp-popup-sub">—</div>
+      </div>
+      <button class="emp-popup-close" onclick="closeEmpPopup()">✕</button>
+    </div>
+    <div class="emp-popup-body">
+      <div class="emp-popup-stats" id="emp-popup-stats"></div>
+      <div class="emp-list" id="emp-list"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const SHEET_ID = '1Ab1aFZywh9zma-nP9oB9dkAY180nrkhV_0ryvh6f7UQ';
 const SHEET_NAME = 'KPI_Data';
+const EMP_SHEET_NAME = 'Employee_Scores';
 let allData = [];
+let empData = [];
 let currentFilter = 'all';
 let currentRAG = null;
 let currentRole = '__all__';
 let currentMapDept = '__all__';
 let currentMonth = '__all__';
+let currentEmployee = '__all__';
 
 const DEPT_MAP = {
   // Facilities
@@ -610,8 +719,9 @@ const DEPT_MAP = {
 
 async function loadData() {
   document.getElementById('spin-icon').style.display = 'inline';
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
   try {
+    // Load KPI_Data
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
     const res = await fetch(url);
     const text = await res.text();
     const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
@@ -619,23 +729,43 @@ async function loadData() {
     allData = json.table.rows.map(r => {
       const row = {};
       cols.forEach((c,i) => { row[c] = r.c[i] ? r.c[i].v : null; });
-      // Normalize Month column — handle different cases
       if (row.month !== undefined && row.Month === undefined) row.Month = row.month;
       if (row.Month && typeof row.Month === 'string') row.Month = row.Month.trim();
-      // Normalize Department column — handle different cases
       if (row.department !== undefined && row.Department === undefined) row.Department = row.department;
       if (row.Department && typeof row.Department === 'string') row.Department = row.Department.trim();
-      // Normalize side_bar column
       if (row.side_bar && typeof row.side_bar === 'string') row.side_bar = row.side_bar.trim();
       return row;
     });
-    console.log('Total rows loaded:', allData.length);
-    console.log('Months found:', [...new Set(allData.map(r => r.Month))]);
-    console.log('Departments found:', [...new Set(allData.map(r => r.Department))]);
-    console.log('Sidebar values found:', [...new Set(allData.map(r => r.side_bar))]);
-    console.log('Sample row:', allData[0]);
+
+    // Load Employee_Scores
+    try {
+      const empUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(EMP_SHEET_NAME)}`;
+      const empRes = await fetch(empUrl);
+      const empText = await empRes.text();
+      const empJson = JSON.parse(empText.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+      const empCols = empJson.table.cols.map(c => c.label);
+      empData = empJson.table.rows.map(r => {
+        const row = {};
+        empCols.forEach((c,i) => { row[c] = r.c[i] ? r.c[i].v : null; });
+        // Normalize month
+        if (row.month !== undefined && row.Month === undefined) row.Month = row.month;
+        if (row.Month && typeof row.Month === 'string') row.Month = row.Month.trim();
+        // Normalize Role_Title
+        if (!row.Role_Title && row.role_title) row.Role_Title = row.role_title;
+        if (!row.Employee_Name && row.employee_name) row.Employee_Name = row.employee_name;
+        if (!row.KPI_ID && row.kpi_id) row.KPI_ID = row.kpi_id;
+        return row;
+      });
+      console.log('Employee rows loaded:', empData.length);
+    } catch(empErr) {
+      console.warn('Employee_Scores sheet not found or error:', empErr.message);
+      empData = [];
+    }
+
+    console.log('Total KPI rows loaded:', allData.length);
     buildMonthSlicer();
     buildSlicer(getMonthData());
+    buildEmpSlicer();
     render(getFiltered());
     document.getElementById('sync-time').textContent = new Date().toLocaleTimeString('en-GB');
     document.getElementById('loading').classList.add('hidden');
@@ -694,10 +824,14 @@ function buildMonthSlicer() {
 function monthChanged(month) {
   currentMonth = month;
   currentRole = '__all__';
+  currentEmployee = '__all__';
   const roleSel = document.getElementById('slicer-select');
   if (roleSel) roleSel.value = '__all__';
+  const empSel = document.getElementById('emp-select');
+  if (empSel) empSel.value = '__all__';
   updateMonthBadge();
   buildSlicer(getMonthData());
+  buildEmpSlicer();
   render(getFiltered());
   refreshMapIfActive();
 }
@@ -821,7 +955,7 @@ function render(data) {
         const pct = (r.Score/5*100).toFixed(1);
         const col = barColor(r.Score);
         const rag = r.RAG_Status === 'Green' ? 'bg' : r.RAG_Status === 'Amber' ? 'ba' : 'br';
-        return `<div class="bar-row" style="margin-bottom:2px;">
+        return `<div class="bar-row clickable" onclick="openEmpPopup('${r.KPI_ID||''}','${(r.KPI_Name||'').replace(/'/g,"\\'")}','${(r.Role_Title||'').replace(/'/g,"\\'")}')">
           <div class="bar-name" title="${r.KPI_Name||''}" style="width:220px;font-size:10px;">${r.KPI_Name||'—'}</div>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -852,7 +986,7 @@ function render(data) {
 
   const top5 = [...scored].sort((a,b)=>b.Score-a.Score).slice(0,6);
   document.getElementById('top-tbody').innerHTML = top5.map(r => `
-    <tr>
+    <tr class="clickable" onclick="openEmpPopup('${r.KPI_ID||''}','${(r.KPI_Name||'').replace(/'/g,"\\'")}','${(r.Role_Title||'').replace(/'/g,"\\'")}')">
       <td>${r.KPI_Name||'—'}<br><span class="kt-role">${r.Role_Title||''}</span></td>
       <td><span class="sc sc${r.Score}">${r.Score}</span></td>
       <td><span class="badge ${r.RAG_Status==='Green'?'bg':r.RAG_Status==='Amber'?'ba':'br'}">${r.RAG_Status||'—'}</span></td>
@@ -860,7 +994,7 @@ function render(data) {
 
   const risk5 = [...scored].filter(r=>r.Score<=2).sort((a,b)=>a.Score-b.Score).slice(0,6);
   document.getElementById('risk-tbody').innerHTML = risk5.map(r => `
-    <tr>
+    <tr class="clickable" onclick="openEmpPopup('${r.KPI_ID||''}','${(r.KPI_Name||'').replace(/'/g,"\\'")}','${(r.Role_Title||'').replace(/'/g,"\\'")}')">
       <td>${r.KPI_Name||'—'}<br><span class="kt-role">${r.Role_Title||''}</span></td>
       <td><span class="sc sc${r.Score}">${r.Score}</span></td>
       <td><span class="badge ${r.RAG_Status==='Green'?'bg':r.RAG_Status==='Amber'?'ba':'br'}">${r.RAG_Status||'—'}</span></td>
@@ -911,7 +1045,11 @@ function refreshMapIfActive() {
 
 function slicerSelectDropdown(role) {
   currentRole = role;
+  currentEmployee = '__all__';
+  const empSel = document.getElementById('emp-select');
+  if (empSel) empSel.value = '__all__';
   updateSlicerBadge();
+  buildEmpSlicer();
   render(getFiltered());
   refreshMapIfActive();
 }
@@ -932,13 +1070,17 @@ function setView(filter, el) {
   currentFilter = filter;
   currentRAG = null;
   currentRole = '__all__';
+  currentEmployee = '__all__';
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   el.classList.add('active');
   const sel = document.getElementById('slicer-select');
   if (sel) sel.value = '__all__';
+  const empSel = document.getElementById('emp-select');
+  if (empSel) empSel.value = '__all__';
   const titles = {all:'All Roles — Overview',Corporate:'Corporate Roles',Clinical:'Clinical Roles',Executive:'Executive Roles',Facilities:'Facilities Roles'};
   document.getElementById('page-title').textContent = titles[filter] || filter;
   buildSlicer(getMonthData());
+  buildEmpSlicer();
   render(getFiltered());
   refreshMapIfActive();
 }
@@ -946,11 +1088,15 @@ function setView(filter, el) {
 function setRAG(rag, el) {
   currentRAG = rag === currentRAG ? null : rag;
   currentRole = '__all__';
+  currentEmployee = '__all__';
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (currentRAG) el.classList.add('active');
   const sel = document.getElementById('slicer-select');
   if (sel) sel.value = '__all__';
+  const empSel = document.getElementById('emp-select');
+  if (empSel) empSel.value = '__all__';
   buildSlicer(getMonthData());
+  buildEmpSlicer();
   render(getFiltered());
   refreshMapIfActive();
 }
@@ -1123,7 +1269,9 @@ function renderKPIMap(search) {
         const sc = k.Score;
         const scCol = sc >= 4.5 ? 'var(--green)' : sc >= 3.5 ? 'var(--accent2)' : sc >= 2.5 ? 'var(--amber)' : sc ? 'var(--red)' : 'var(--t3)';
         const ragClass = k.RAG_Status === 'Green' ? 'bg' : k.RAG_Status === 'Amber' ? 'ba' : k.RAG_Status === 'Red' ? 'br' : '';
-        html += `<div class="map-kpi-row">
+        const safeKpiName = (k.KPI_Name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeRole = (role || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        html += `<div class="map-kpi-row clickable" onclick="openEmpPopup('${kpiId}','${safeKpiName}','${safeRole}')">
           <span class="map-kpi-num">${kpiId}</span>
           <span class="map-kpi-name" title="${k.KPI_Name || ''}">${k.KPI_Name || '—'}</span>
           <span class="map-kpi-score" style="color:${scCol}">${sc || '—'}</span>
@@ -1140,6 +1288,155 @@ function renderKPIMap(search) {
   if (!html) html = '<div style="color:var(--t3);font-size:12px;grid-column:1/-1;text-align:center;padding:40px 0;">No results found</div>';
   grid.innerHTML = html;
 }
+
+// ── Employee Functions ──
+
+function getEmpMonthData() {
+  if (currentMonth === '__all__') return empData;
+  return empData.filter(r => r.Month === currentMonth);
+}
+
+function getEmpFiltered() {
+  let d = getEmpMonthData();
+  if (currentRole !== '__all__') d = d.filter(r => r.Role_Title === currentRole);
+  if (currentEmployee !== '__all__') d = d.filter(r => r.Employee_Name === currentEmployee);
+  return d;
+}
+
+function buildEmpSlicer() {
+  const monthEmp = getEmpMonthData();
+  let emps = [...new Set(monthEmp.map(r => r.Employee_Name).filter(Boolean))].sort();
+  if (currentRole !== '__all__') {
+    const roleEmps = monthEmp.filter(r => r.Role_Title === currentRole);
+    emps = [...new Set(roleEmps.map(r => r.Employee_Name).filter(Boolean))].sort();
+  }
+  const sel = document.getElementById('emp-select');
+  sel.innerHTML = '<option value="__all__">All Employees</option>';
+  emps.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    if (name === currentEmployee) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (currentEmployee === '__all__') sel.value = '__all__';
+  updateEmpBadge();
+}
+
+function updateEmpBadge() {
+  const tag = document.getElementById('emp-tag');
+  const countEl = document.getElementById('emp-count');
+  const monthEmp = getEmpMonthData();
+  let emps;
+  if (currentRole !== '__all__') {
+    emps = [...new Set(monthEmp.filter(r => r.Role_Title === currentRole).map(r => r.Employee_Name).filter(Boolean))];
+  } else {
+    emps = [...new Set(monthEmp.map(r => r.Employee_Name).filter(Boolean))];
+  }
+  if (currentEmployee === '__all__') {
+    tag.textContent = 'All';
+    tag.style.background = 'rgba(0,201,167,.12)';
+    tag.style.color = 'var(--accent2)';
+  } else {
+    tag.textContent = currentEmployee.split(' ').slice(0,2).join(' ');
+    tag.style.background = 'rgba(61,127,255,.12)';
+    tag.style.color = 'var(--accent)';
+  }
+  countEl.textContent = emps.length + ' employees';
+}
+
+function empChanged(emp) {
+  currentEmployee = emp;
+  updateEmpBadge();
+  render(getFiltered());
+  refreshMapIfActive();
+}
+
+function getEmpsForKPI(kpiId, roleTitle) {
+  const monthEmp = getEmpMonthData();
+  return monthEmp.filter(r => {
+    const matchKPI = r.KPI_ID === kpiId;
+    const matchRole = r.Role_Title === roleTitle;
+    return matchKPI && matchRole;
+  });
+}
+
+function openEmpPopup(kpiId, kpiName, roleTitle) {
+  const emps = getEmpsForKPI(kpiId, roleTitle);
+  const overlay = document.getElementById('emp-overlay');
+  document.getElementById('emp-popup-title').textContent = kpiName || kpiId;
+  document.getElementById('emp-popup-sub').textContent = roleTitle + ' · ' + kpiId;
+
+  const statsEl = document.getElementById('emp-popup-stats');
+  const listEl = document.getElementById('emp-list');
+
+  if (!emps.length) {
+    statsEl.innerHTML = '';
+    listEl.innerHTML = '<div class="emp-no-data">لا يوجد بيانات موظفين لهذا الـ KPI</div>';
+    overlay.classList.add('show');
+    return;
+  }
+
+  const scored = emps.filter(e => e.Score);
+  const avg = scored.length ? (scored.reduce((s,e) => s + e.Score, 0) / scored.length) : 0;
+  const maxS = scored.length ? Math.max(...scored.map(e => e.Score)) : 0;
+  const minS = scored.length ? Math.min(...scored.map(e => e.Score)) : 0;
+  const avgCol = barColor(avg);
+
+  statsEl.innerHTML = `
+    <div class="emp-popup-stat">
+      <div class="emp-popup-stat-val" style="color:var(--accent2)">${emps.length}</div>
+      <div class="emp-popup-stat-label">Employees</div>
+    </div>
+    <div class="emp-popup-stat">
+      <div class="emp-popup-stat-val" style="color:${avgCol}">${avg ? avg.toFixed(1) : '—'}</div>
+      <div class="emp-popup-stat-label">Avg Score</div>
+    </div>
+    <div class="emp-popup-stat">
+      <div class="emp-popup-stat-val" style="color:var(--green)">${maxS || '—'}</div>
+      <div class="emp-popup-stat-label">Highest</div>
+    </div>
+    <div class="emp-popup-stat">
+      <div class="emp-popup-stat-val" style="color:var(--red)">${minS || '—'}</div>
+      <div class="emp-popup-stat-label">Lowest</div>
+    </div>
+  `;
+
+  const sorted = [...emps].sort((a,b) => (b.Score||0) - (a.Score||0));
+  const avatarColors = ['#3D7FFF','#00C9A7','#A78BFA','#FFB020','#FF5A5A','#22C87A','#FF6B9D','#4ECDC4'];
+
+  listEl.innerHTML = sorted.map((e, i) => {
+    const sc = e.Score;
+    const scCol = barColor(sc);
+    const pct = sc ? (sc/5*100) : 0;
+    const initials = (e.Employee_Name||'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+    const avColor = avatarColors[i % avatarColors.length];
+    const ragLabel = sc >= 4.5 ? 'Excellent' : sc >= 3.5 ? 'Good' : sc >= 2.5 ? 'Fair' : sc ? 'Poor' : 'N/A';
+    const ragClass = sc >= 4.5 ? 'bg' : sc >= 3.5 ? 'bg' : sc >= 2.5 ? 'ba' : sc ? 'br' : '';
+
+    return `<div class="emp-row">
+      <div class="emp-rank">#${i+1}</div>
+      <div class="emp-avatar" style="background:${avColor}">${initials}</div>
+      <div class="emp-info">
+        <div class="emp-name">${e.Employee_Name||'—'}</div>
+        <div class="emp-role-tag">${ragLabel}</div>
+      </div>
+      <div class="emp-score-wrap">
+        <div class="emp-score-bar"><div class="emp-score-bar-fill" style="width:${pct}%;background:${scCol}"></div></div>
+        <span class="emp-score" style="color:${scCol}">${sc || '—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  overlay.classList.add('show');
+}
+
+function closeEmpPopup() {
+  document.getElementById('emp-overlay').classList.remove('show');
+}
+
+// Close popup on Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEmpPopup(); });
 
 loadData();
 setInterval(loadData, 60000);
